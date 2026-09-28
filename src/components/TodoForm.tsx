@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import type{ Todo } from "../types/todo";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import type { Todo } from "../types/todo";
 
 type TodoFormProps = {
   onSubmit: (todo: Omit<Todo, "id">) => void;
@@ -7,32 +8,31 @@ type TodoFormProps = {
   onCancel: () => void;
 };
 
+const todoValidationSchema = Yup.object({
+  title: Yup.string()
+    .trim()
+    .min(3, "Title must be at least 3 characters.")
+    .required("Title is required."),
+  userId: Yup.number()
+    .typeError("Valid User ID is required.")
+    .positive("Valid User ID is required.")
+    .required("Valid User ID is required."),
+  completed: Yup.boolean(),
+});
+
 function TodoForm({ onSubmit, editTodo, onCancel }: TodoFormProps) {
-  const [title, setTitle]       = useState("");
-  const [userId, setUserId]     = useState(1);
-  const [completed, setCompleted] = useState(false);
-  const [error, setError]       = useState("");
-
-  useEffect(() => {
-    if (editTodo) {
-      setTitle(editTodo.title);
-      setUserId(editTodo.userId);
-      setCompleted(editTodo.completed);
-    } else {
-      setTitle("");
-      setUserId(1);
-      setCompleted(false);
-    }
-  }, [editTodo]);
-
-  function handleSubmit() {
-    if (!title.trim())        { setError("Title is required."); return; }
-    if (title.trim().length < 3) { setError("Title must be at least 3 characters."); return; }
-    if (!userId || userId <= 0)  { setError("Valid User ID is required."); return; }
-
-    setError("");
-    onSubmit({ title, userId, completed });
-  }
+  const formik = useFormik({
+    initialValues: {
+      title: editTodo?.title ?? "",
+      userId: editTodo?.userId ?? 1,
+      completed: editTodo?.completed ?? false,
+    },
+    enableReinitialize: true,
+    validationSchema: todoValidationSchema,
+    onSubmit: (values) => {
+      onSubmit(values);
+    },
+  });
 
   return (
     <div style={{ background: "white", padding: "20px", border: "1px solid #ccc" }}>
@@ -40,54 +40,66 @@ function TodoForm({ onSubmit, editTodo, onCancel }: TodoFormProps) {
         {editTodo ? "Edit Todo" : "Add New Todo"}
       </h2>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px", marginBottom: "16px" }}>
+      <form onSubmit={formik.handleSubmit}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px", marginBottom: "16px" }}>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label style={{ fontSize: "0.9rem", color: "#555" }}>Title</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Enter todo title"
-            style={{ padding: "8px", border: "1px solid #ccc" }}
-          />
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <label style={{ fontSize: "0.9rem", color: "#555" }}>Title</label>
+            <input
+              name="title"
+              value={formik.values.title}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              placeholder="Enter todo title"
+              style={{ padding: "8px", border: "1px solid #ccc" }}
+            />
+            {formik.touched.title && formik.errors.title && (
+              <p style={{ color: "#dc2626", fontSize: "0.8rem" }}>{formik.errors.title}</p>
+            )}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <label style={{ fontSize: "0.8rem", color: "#555" }}>User ID</label>
+            <input
+              type="number"
+              name="userId"
+              value={formik.values.userId}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              style={{ padding: "8px", border: "1px solid #ccc" }}
+            />
+            {formik.touched.userId && formik.errors.userId && (
+              <p style={{ color: "#dc2626", fontSize: "0.8rem" }}>{formik.errors.userId}</p>
+            )}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <label style={{ fontSize: "0.8rem", color: "#555" }}>Status</label>
+            <select
+              name="completed"
+              value={formik.values.completed ? "true" : "false"}
+              onChange={(e) => formik.setFieldValue("completed", e.target.value === "true")}
+              onBlur={formik.handleBlur}
+              style={{ padding: "8px", border: "1px solid #ccc" }}
+            >
+              <option value="false">Pending</option>
+              <option value="true">Completed</option>
+            </select>
+          </div>
+
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label style={{ fontSize: "0.8rem", color: "#555" }}>User ID</label>
-          <input
-            type="number"
-            value={userId}
-            onChange={(e) => setUserId(Number(e.target.value))}
-            style={{ padding: "8px", border: "1px solid #ccc" }}
-          />
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label style={{ fontSize: "0.8rem", color: "#555" }}>Status</label>
-          <select
-            value={completed ? "true" : "false"}
-            onChange={(e) => setCompleted(e.target.value === "true")}
-            style={{ padding: "8px", border: "1px solid #ccc" }}
-          >
-            <option value="false">Pending</option>
-            <option value="true">Completed</option>
-          </select>
-        </div>
-
-      </div>
-
-      {error && <p style={{ color: "#dc2626", fontSize: "0.8rem", marginBottom: "10px" }}>{error}</p>}
-
-      <div style={{ display: "flex", gap: "10px" }}>
-        <button onClick={handleSubmit} style={{ padding: "10px 24px", background: "#2563eb", color: "white", border: "none", cursor: "pointer" }}>
-          {editTodo ? "Save Changes" : "Add Todo"}
-        </button>
-        {editTodo && (
-          <button onClick={onCancel} style={{ padding: "10px 24px", background: "none", border: "1px solid #ccc", cursor: "pointer", color: "#dc2626" }}>
-            Cancel
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button type="submit" style={{ padding: "10px 24px", background: "#2563eb", color: "white", border: "none", cursor: "pointer" }}>
+            {editTodo ? "Save Changes" : "Add Todo"}
           </button>
-        )}
-      </div>
+          {editTodo && (
+            <button type="button" onClick={onCancel} style={{ padding: "10px 24px", background: "none", border: "1px solid #ccc", cursor: "pointer", color: "#dc2626" }}>
+              Cancel
+            </button>
+          )}
+        </div>
+      </form>
     </div>
   );
 }
