@@ -10,6 +10,10 @@ function Dashboard() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError]     = useState<string>("");
   const navigate              = useNavigate();
+  const[currentPage,setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
+  const[search,setSearch] = useState<string>("");
+  const[filter,setFilter] = useState<string>("all");
 
   useEffect(() => {
     async function fetchTodos() {
@@ -46,6 +50,25 @@ function Dashboard() {
   const completed = todos.filter(t => t.completed).length;
   const pending   = todos.filter(t => !t.completed).length;
 
+  const filterTodos = todos.filter(t =>{
+    
+    const matchSearch = t.title.toLowerCase().includes(search.toLowerCase());
+    const matchFilter = 
+    filter == "all" ?  true:
+    filter == "completed" ? t.completed === true:
+                            t.completed === false;
+
+      return matchSearch && matchFilter;
+  })
+
+  const totalPages = Math.ceil(filterTodos.length/itemsPerPage);
+
+  const paginatedTodos = filterTodos.slice(
+    (currentPage-1) * itemsPerPage,
+    currentPage*itemsPerPage
+
+  );
+
   return (
     <div style={{ maxWidth: "960px", margin: "24px auto", padding: "0 20px", display: "flex", flexDirection: "column", gap: "16px" }}>
 
@@ -53,6 +76,25 @@ function Dashboard() {
         <StatsCard label="Total"     count={total} />
         <StatsCard label="Completed" count={completed} />
         <StatsCard label="Pending"   count={pending} />
+      </div>
+
+      <div style={{ display: "flex", gap: "10px" }}>
+        <input
+          type="text"
+          placeholder="Search by title..."
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+          style={{ flex: 1, padding: "8px", border: "1px solid #ccc" }}
+        />
+        <select
+          value={filter}
+          onChange={(e) => { setFilter(e.target.value); setCurrentPage(1); }}
+          style={{ padding: "8px", border: "1px solid #ccc" }}
+        >
+          <option value="all">All</option>
+          <option value="completed">Completed</option>
+          <option value="pending">Pending</option>
+        </select>
       </div>
 
 
@@ -72,12 +114,34 @@ function Dashboard() {
       ) : (
         <div style={{ background: "white", padding: "20px", border: "1px solid #ccc" }}>
           <TodoTable
-            todos={todos}
+            todos={paginatedTodos}
             onEdit={(todo) => navigate(`/edit/${todo.id}`)}
             onDelete={handleDelete}
           />
         </div>
       )}
+        <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+        <button
+          onClick={() => setCurrentPage(p => p - 1)}
+          disabled={currentPage === 1}
+          style={{ padding: "6px 14px", cursor: "pointer", border: "1px solid #ccc" }}
+        >
+          Prev
+        </button>
+
+        <span style={{ padding: "6px 14px" }}>
+          {currentPage} / {totalPages}
+        </span>
+
+        <button
+          onClick={() => setCurrentPage(p => p + 1)}
+          disabled={currentPage === totalPages}
+          style={{ padding: "6px 14px", cursor: "pointer", border: "1px solid #ccc" }}
+        >
+          Next
+        </button>
+      </div>
+
     </div>
   );
 }
