@@ -13,34 +13,58 @@ function Dashboard() {
   const[currentPage,setCurrentPage] = useState<number>(1);
   const itemsPerPage = 10;
   const[search,setSearch] = useState<string>("");
-  const[filter,setFilter] = useState<string>("all");
+  const[filterr,setFilter] = useState<string>("all");
+
+  // useEffect(() => {
+  //   async function fetchTodos() {
+  //     try {
+  //       const saved = localStorage.getItem("todos");
+  //       if(saved){
+  //           setTodos(JSON.parse(saved));
+  //           setLoading(false);
+  //           return;
+  //       }
+  //       const response = await getTodos();
+  //       console.log("Api data:",response);
+  //       localStorage.setItem("todos",JSON.stringify(response));
+  //       setTodos(Array.isArray(response) ? response: []);      } catch {
+  //       setError("Failed to fetch todos.");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   }
+  //   fetchTodos();
+  // }, []);
 
   useEffect(() => {
-    async function fetchTodos() {
-      try {
-        const saved = localStorage.getItem("todos");
-        if(saved){
-            setTodos(JSON.parse(saved));
-            setLoading(false);
-            return;
-        }
-        const data = await getTodos();
-        console.log("Api data:",data);
-        localStorage.setItem("todos",JSON.stringify(data));
-        setTodos(data);
-      } catch {
-        setError("Failed to fetch todos.");
-      } finally {
-        setLoading(false);
+  async function fetchTodos() {
+    try {
+      const response = await getTodos();
+
+      console.log("API data:", response);
+      console.log("Is array:", Array.isArray(response));
+
+      if (Array.isArray(response)) {
+        setTodos(response);
+        localStorage.setItem("todos", JSON.stringify(response));
+      } else {
+        setTodos([]);
+        setError("API did not return an array.");
       }
+    } catch {
+      setError("Failed to fetch todos.");
+    } finally {
+      setLoading(false);
     }
-    fetchTodos();
-  }, []);
+  }
+
+  fetchTodos();
+}, []);
 
   function handleDelete(id: number) {
     if (!confirm("Are you sure?")) return;
 
-      const updated = todos.filter(t => t.id !== id);
+      const updated = todos?.filter(t => t.id !== id);
       setTodos(updated);
       localStorage.setItem("todos",JSON.stringify(updated))
     
@@ -54,8 +78,8 @@ function Dashboard() {
     
     const matchSearch = t.title.toLowerCase().includes(search.toLowerCase());
     const matchFilter = 
-    filter == "all" ?  true:
-    filter == "completed" ? t.completed === true:
+    filterr == "all" ?  true:
+    filterr == "completed" ? t.completed === true:
                             t.completed === false;
 
       return matchSearch && matchFilter;
@@ -87,7 +111,7 @@ function Dashboard() {
           style={{ flex: 1, padding: "8px", border: "1px solid #ccc" }}
         />
         <select
-          value={filter}
+          value={filterr}
           onChange={(e) => { setFilter(e.target.value); setCurrentPage(1); }}
           style={{ padding: "8px", border: "1px solid #ccc" }}
         >
